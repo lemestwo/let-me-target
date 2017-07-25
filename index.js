@@ -1,5 +1,5 @@
 /**
- * Version: 0.0.8 (beta)
+ * Version: 0.1.0 
  * 
  * DONE:
  * Cleanse all party members up to 4
@@ -8,31 +8,13 @@
  * TODO:
  * Toggle: target all or only low hp
  * Healing Immersion
- * Auto-lock first target
  */
 var fs = require('fs');
 
 const DEBUG = true,
-    SKILLS = [{
-        id: 67159764, // mystic basic heal
-        job: 7,
-        heal: true,
-        targets: 4
-    },
-    {
-        id: 67299764, // priest basic heal
-        job: 6,
-        heal: true,
-        targets: 4
-    },
-    {
-        id: 67198964, // mystic cleanse
-        heal: false,
-        job: 7,
-        targets: 4
-    }]
-
-const Command = require('command');
+    skills = require('./skills'),
+    config = require('./config.json'),
+    Command = require('command');
 
 module.exports = function LetMeTarget(dispatch) {
     const command = Command(dispatch);
@@ -43,14 +25,36 @@ module.exports = function LetMeTarget(dispatch) {
         cid = null,
         model = null,
         job = null,
-        partyMembers = null;
+        partyMembers = null,
+        ownX = null,
+        ownY = null,
+        ownZ = null,
+        ownAlive = false;
+
+    let lockdelay = config.delay_lockon.on || true,
+        lockmin = config.delay_lockon.min || 25,
+        lockmax = config.delay_lockon.max || 150;
 
     dispatch.hook('S_LOGIN', 2, (event) => {
         ownId = event.playerId;
         cid = event.cid;
         model = event.model;
         job = (model - 10101) % 100;
-        //message('Job: ' + job);
+    });
+
+    command.add('lockon', (func, value1, value2) => {
+        if (func == 'on') {
+            enabled = true;
+            command.msg('Let me Lock in ENABLED');
+        } else if (func == 'off') {
+            enabled = false;
+            command.msg('Let me Lock in DISABLED');
+        }
+        
+    });
+
+    dispatch.hook('S_SPAWN_ME', 1, event => {
+        ownAlive = event.alive
     });
 
     dispatch.hook('S_PARTY_MEMBER_LIST', 5, (event) => {
@@ -59,7 +63,19 @@ module.exports = function LetMeTarget(dispatch) {
 
         for (let party of event.members) {
             if (party.playerId != ownId) {
-                partyMembers.push(party);
+
+                partyMembers.push({
+                    playerId: party.playerId,
+                    cid: party.cid,
+                    online: party.online,
+                    hpP: party.online ? 100 : 0,
+                    debuff: false,
+                    x: null,
+                    y: null,
+                    z: null,
+                    name: party.name
+                });
+
             }
         }
 
@@ -69,91 +85,125 @@ module.exports = function LetMeTarget(dispatch) {
         partyMembers = [];
     });
 
-    dispatch.hook('S_LEAVE_PARTY_MEMBER', 1, (event) => {
-        if (partyMembers.includes(event.playerId)) {
-            let index = partyMembers.indexOf(event.playerId);
-            partyMembers.splice(index, 1);
-        }
+    dispatch.hook('S_LEAVE_PARTY_MEMBER', 2, (event) => {
 
-        if (partyMembers.length > 0) {
-            partyMembers.filter(onlyUnique);
-        }
+        partyMembers = partyMembers.filter(function (p) {
+            return p.playerId != event.playerId;
+        });
+
     });
 
-    // Check if HP from that member have changed
     dispatch.hook('S_PARTY_MEMBER_CHANGE_HP', 2, (event) => {
 
-        // If low hp and not dead
-        if ((event.maxHp - event.currentHp) != 0 && event.currentHp > 0 && event.playerId != ownId && !needHeal.includes(event.playerId)) {
-            needHeal.push(event.playerId);
+        for (let i = 0; i < partyMembers.length; i++) {
+            if (partyMembers[i].playerId == event.playerId) {
+                partyMembers[i].hpP = Math.round(event.currentHp / event.maxHp * 100);
+                break;
+            }
         }
 
-        // if full hp
-        if (event.currentHp == event.maxHp && needHeal.includes(event.playerId)) {
-            let index = needHeal.indexOf(event.playerId);
-            needHeal.splice(index, 1);
-        }
-
-        // clean duplicates names if needed
-        if (needHeal.length > 0) {
-            needHeal.filter(onlyUnique);
-        }
-    })
-
-    // Check if dead and get off of the list
-    dispatch.hook('S_PARTY_MEMBER_STAT_UPDATE', 2, (event) => {
-        if (event.curHp == 0 && needHeal.includes(event.playerId)) {
-            let index = needHeal.indexOf(event.playerId);
-            needHeal.splice(index, 1);
-        }
-
-        // clean duplicates names if needed
-        if (needHeal.length > 0) {
-            needHeal.filter(onlyUnique);
-        }
     });
 
-    dispatch.hook('S_ACTION_END', 1, { order: -10 }, (event) => {
-        //if (DEBUG) message('Skill Id: ' + event.skill);
+    dispatch.hook('S_LOGOUT_PARTY_MEMBER', 1, (event) => {
 
-        let packetSkillInfo = SKILLS.find(o => o.id == event.skill);
-        if (packetSkillInfo && event.source.equals(cid) && packetSkillInfo.job == job) {
+        for (let i = 0; i < partyMembers.length; i++) {
+            if (partyMembers[i].playerId == event.playerId) {
+                partyMembers[i].online = false;
+                break;
+            }
+        }
 
-            if (packetSkillInfo.heal && needHeal.length > 0) {
+    });
 
-                for (let m of needHeal) {
+    dispatch.hook('S_USER_LOCATION', 1, { order: -10 }, (event) => {
 
-                    var memberInfo = partyMembers.find(o => o.playerId === m);
-                    if (memberInfo != null) {
+        if (partyMembers != null) {
+            for (let i = 0; i < partyMembers.length; i++) {
+                if (partyMembers[i].cid.equals(event.target)) {
+                    partyMembers[i].x = (event.x1 + event.x2) / 2;
+                    partyMembers[i].y = (event.y1 + event.y2) / 2;
+                    partyMembers[i].z = (event.z1 + event.z2) / 2;
+                    break;
+                }
+            }
+        }
+
+    })
+
+    dispatch.hook('C_PLAYER_LOCATION', 1, { order: -10 }, event => {
+        ownX = (event.x1 + event.x2) / 2;
+        ownY = (event.y1 + event.y2) / 2;
+        ownZ = (event.z1 + event.z2) / 2;
+    });
+
+    dispatch.hook('C_START_SKILL', 3, { order: -10 }, (event) => {
+
+        if (!enabled) return;
+
+        let packetSkillInfo = skills.find(o => o.id == event.skill);
+        if (packetSkillInfo && packetSkillInfo.job == job) {
+
+            if (packetSkillInfo.type == 'heal' && partyMembers.length > 0) {
+
+                sortHp();
+                let qtdTarget = 0;
+                for (let i = 0; i < partyMembers.length; i++) {
+                    let distance = checkDistance(ownX, ownY, ownZ, partyMembers[i].x, partyMembers[i].y, partyMembers[i].z);
+
+                    if (partyMembers[i].hpP > 0 && partyMembers[i].hpP < 100 && distance <= 35 && qtdTarget <= packetSkillInfo.targets) {
                         let newEvent = {
-                            target: memberInfo.cid,
+                            target: partyMembers[i].cid,
                             unk: 0,
                             skill: event.skill
                         }
-                        dispatch.toServer('C_CAN_LOCKON_TARGET', 1, newEvent);
-                        dispatch.toClient('S_CAN_LOCKON_TARGET', 1, Object.assign({ ok: true }, newEvent));
-                        //if (DEBUG) message('Target name: ' + memberInfo.name);
+                        setTimeout(function () {
+                            dispatch.toServer('C_CAN_LOCKON_TARGET', 1, newEvent);
+                            setTimeout(function () {
+                                dispatch.toClient('S_CAN_LOCKON_TARGET', 1, Object.assign({ ok: true }, newEvent));
+                            }, 20);
+                        }, lockdelay ? dRandom() : 0);
+                        qtdTarget++;
                     }
 
                 }
 
-            } else if (packetSkillInfo.heal == false && partyMembers != null) {
+            } else if (packetSkillInfo.type == 'cleanse' && partyMembers != null) {
 
-                for (let p of partyMembers) {
+                let qtdTarget = 0;
+                for (let i = 0; i < partyMembers.length; i++) {
+                    let distance = checkDistance(ownX, ownY, ownZ, partyMembers[i].x, partyMembers[i].y, partyMembers[i].z);
 
-                    let newEvent = {
-                        target: p.cid,
-                        unk: 0,
-                        skill: event.skill
+                    if (distance <= 35 && qtdTarget <= packetSkillInfo.targets) {
+                        let newEvent = {
+                            target: partyMembers[i].cid,
+                            unk: 0,
+                            skill: event.skill
+                        }
+                        setTimeout(function () {
+                            dispatch.toServer('C_CAN_LOCKON_TARGET', 1, newEvent);
+                            setTimeout(function () {
+                                dispatch.toClient('S_CAN_LOCKON_TARGET', 1, Object.assign({ ok: true }, newEvent));
+                            }, 20);
+                        }, lockdelay ? dRandom() : 0);
+                        qtdTarget++;
                     }
-                    dispatch.toServer('C_CAN_LOCKON_TARGET', 1, newEvent);
-                    dispatch.toClient('S_CAN_LOCKON_TARGET', 1, Object.assign({ ok: true }, newEvent));
+
                 }
 
             }
 
         }
     });
+
+    function sortHp() {
+        partyMembers.sort(function (a, b) {
+            return parseFloat(a.hpP) - parseFloat(b.hpP);
+        });
+    }
+
+    function checkDistance(x, y, z, x1, y1, z1) {
+        return (Math.sqrt(Math.pow(x1 - x, 2) + Math.pow(y1 - y, 2) + Math.pow(z1 - z, 2))) / 25;
+    }
 
     function onlyUnique(value, index, self) {
         return self.indexOf(value) === index;
@@ -174,5 +224,9 @@ module.exports = function LetMeTarget(dispatch) {
             console.log('(Let Me Target) ' + msg);
         }
 
-    };
+    }
+
+    function dRandom() {
+        return Math.floor(Math.random() * (lockmax - lockmin)) + lockmin;
+    }
 }
