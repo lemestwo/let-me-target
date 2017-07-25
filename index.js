@@ -25,8 +25,8 @@ module.exports = function LetMeTarget(dispatch) {
         ownAlive = false;
 
     let lockdelay = config.delay_lockon.on || true,
-        lockmin = config.delay_lockon.min || 25,
-        lockmax = config.delay_lockon.max || 150;
+        lockmin = config.delay_lockon.min || 200,
+        lockmax = config.delay_lockon.max || 700;
 
     dispatch.hook('S_LOGIN', 2, (event) => {
         ownId = event.playerId;
@@ -38,10 +38,10 @@ module.exports = function LetMeTarget(dispatch) {
     command.add('lockon', (func, value1, value2) => {
         if (func == 'on') {
             enabled = true;
-            command.msg('Let me Lock in ENABLED');
+            command.msg('Let me Lock is ENABLED');
         } else if (func == 'off') {
             enabled = false;
-            command.msg('Let me Lock in DISABLED');
+            command.msg('Let me Lock is DISABLED');
         }
         
     });
