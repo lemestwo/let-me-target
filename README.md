@@ -9,7 +9,6 @@ If you found bugs just let me know.
 You need Command module by Pinkie to work.
 
 ## Done
-<<<<<<< HEAD
  * Auto-lock up to 4 members from the lowest HP to highest. (Mystic/Priest basic heal)
  * Auto-lock up to 4 members to cleanse. (still dumb) (Mystic cleanse)
  * Can toggle on/off by command.
@@ -23,7 +22,3 @@ You need Command module by Pinkie to work.
  * Auto-lock skills on Boss
  * Smart detection for Mystic cleanse
  * Others
-=======
- * Auto-lock up to 4 members with low HP (Mystic and Priest basic heal).
- * Auto-lock all 4 members to cleanse (Mystic cleanse).
->>>>>>> 1c439a46e706e4c2c2a79d03059bbc2139ec43a7
