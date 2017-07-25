@@ -137,7 +137,7 @@ module.exports = function LetMeTarget(dispatch) {
 
                 }
 
-            } else if (packetSkillInfo.heal == false && partyMembers.length > 0) {
+            } else if (packetSkillInfo.heal == false && partyMembers != null) {
 
                 for (let p of partyMembers) {
 
