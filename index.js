@@ -1,13 +1,6 @@
 /**
  * Version: 0.1.0 
- * 
- * DONE:
- * Cleanse all party members up to 4
- * Heal low hp members up to 4
- * 
- * TODO:
- * Toggle: target all or only low hp
- * Healing Immersion
+ * Made by Loggeru
  */
 var fs = require('fs');
 
