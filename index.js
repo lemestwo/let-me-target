@@ -131,7 +131,7 @@ module.exports = function LetMeTarget(dispatch) {
                             skill: event.skill
                         }
                         dispatch.toServer('C_CAN_LOCKON_TARGET', 1, newEvent);
-                        dispatch.toClient('C_CAN_LOCKON_TARGET', 1, Object.assign({ ok: true }, newEvent));
+                        dispatch.toClient('S_CAN_LOCKON_TARGET', 1, Object.assign({ ok: true }, newEvent));
                         //if (DEBUG) message('Target name: ' + memberInfo.name);
                     }
 
@@ -147,7 +147,7 @@ module.exports = function LetMeTarget(dispatch) {
                         skill: event.skill
                     }
                     dispatch.toServer('C_CAN_LOCKON_TARGET', 1, newEvent);
-                    dispatch.toClient('C_CAN_LOCKON_TARGET', 1, Object.assign({ ok: true }, newEvent));
+                    dispatch.toClient('S_CAN_LOCKON_TARGET', 1, Object.assign({ ok: true }, newEvent));
                 }
 
             }
