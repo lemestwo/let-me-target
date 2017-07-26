@@ -17,7 +17,7 @@ If you found bugs just let me know.
     * Still need tests
     * Can toogle on/off by command and config file (default: on)
  * Auto-lock boss and finish the skill automatically
-    * Arrow Voley and Arcane Barrage
+    * Arrow Volley and Flaming Barrage
     * Energy Start (will be moved **soon** to another type)
     * Auto-finish can be toogle by command and config file (default: off)
     * Delay to finish can be changed by command and config file (default: 300)
