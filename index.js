@@ -1,11 +1,10 @@
 /**
- * Version: 0.1.0 
+ * Version: 0.2.0
  * Made by Loggeru
  */
 var fs = require('fs');
 
-const DEBUG = true,
-    skills = require('./skills'),
+const skills = require('./skills'),
     config = require('./config.json'),
     Command = require('command');
 
@@ -22,11 +21,15 @@ module.exports = function LetMeTarget(dispatch) {
         ownY = null,
         ownZ = null,
         ownAlive = false,
-        locking = false;
+        locking = false,
+        bossInfo = null;
 
-    let lockdelay = config.delay_lockon.on || true,
-        lockmin = config.delay_lockon.min || 200,
-        lockmax = config.delay_lockon.max || 700;
+    let lockDelay = config.delay_lockon.on || true,
+        lockmin = config.delay_lockon.min || 50,
+        lockmax = config.delay_lockon.max || 300,
+        smartC = config.cleanse.smartC || true,
+        autoDps = config.dps.auto || false,
+        autoDpsDelay = config.dps.delay || 350;
 
     dispatch.hook('S_LOGIN', 2, (event) => {
         ownId = event.playerId;
@@ -35,15 +38,34 @@ module.exports = function LetMeTarget(dispatch) {
         job = (model - 10101) % 100;
     });
 
-    command.add('lockon', (func, value1, value2) => {
-        if (func == 'on') {
-            enabled = true;
-            command.msg('Let me Lock is ENABLED');
-        } else if (func == 'off') {
-            enabled = false;
-            command.msg('Let me Lock is DISABLED');
-        }
+    command.add('lockon', () => {
+        enabled = !enabled;
+        let txt = (enabled) ? 'ENABLED' : 'DISABLED';
+        message('Let me Lock is ' + txt, true);
+    });
 
+    command.add('lockhuman', () => {
+        lockDelay = !lockDelay;
+        let txt = (lockDelay) ? 'ENABLED' : 'DISABLED';
+        message('Human Behavior is ' + txt, true);
+    });
+
+    command.add('smartc', () => {
+        smartC = !smartC;
+        let txt = (smartC) ? 'ENABLED' : 'DISABLED';
+        message('Smart Cleanse is ' + txt, true);
+    });
+
+    command.add('autodps', (v1) => {
+        if (v1 != null) {
+            v1 = parseInt(v1);
+            autoDpsDelay = v1;
+            message('Auto DPS Delay changed to ' + v1, true);
+        } else {
+            autoDps = !autoDps;
+            let txt = (autoDps) ? 'ENABLED' : 'DISABLED';
+            message('Auto DPS is ' + txt, true);
+        }
     });
 
     dispatch.hook('S_SPAWN_ME', 1, event => {
@@ -76,6 +98,8 @@ module.exports = function LetMeTarget(dispatch) {
     });
     dispatch.hook('S_LEAVE_PARTY', 1, (event) => {
         partyMembers = [];
+        bossInfo = null;
+        locking = false;
     });
 
     dispatch.hook('S_LEAVE_PARTY_MEMBER', 2, (event) => {
@@ -131,7 +155,7 @@ module.exports = function LetMeTarget(dispatch) {
 
     dispatch.hook('S_ABNORMALITY_BEGIN', 1, { order: -10 }, (event) => {
         if (event.source.low == 0 || event.source.high == 0 || event.target.equals(event.source) || partyMembers == null || event.source.equals(cid)) return;
-        for (let y=x; y<partyMembers.length; y++) {
+        for (let y = x; y < partyMembers.length; y++) {
             if (partyMembers[y].cid.equals(event.source)) return;
         }
 
@@ -164,10 +188,43 @@ module.exports = function LetMeTarget(dispatch) {
 
     });
 
-    dispatch.hook('C_START_SKILL', 3, { order: -10 }, (event) => {
+    dispatch.hook('S_BOSS_GAGE_INFO', 2, { order: -10 }, (event) => {
 
+        if (event.curHp < event.maxHp && bossInfo == null) {
+            bossInfo = {
+                id: event.id,
+                x: null,
+                y: null,
+                z: null,
+                w: null,
+                hp: Math.round(event.curHp / event.maxHp * 100)
+            };
+        }
+
+        if (bossInfo != null && event.id.equals(bossInfo.id)) {
+            bossInfo.hp = Math.round(event.curHp / event.maxHp * 100);
+            if (event.curHp <= 0) bossInfo = null;
+        }
+
+    });
+
+    dispatch.hook('S_ACTION_STAGE', 1, { order: -10 }, (event) => {
+
+        if (bossInfo == null) return;
+        if (event.source.equals(bossInfo.id)) {
+            bossInfo.x = event.x;
+            bossInfo.y = event.y;
+            bossInfo.z = event.z;
+            bossInfo.w = event.w;
+        }
+
+    });
+
+    dispatch.hook('C_START_SKILL', 3, { order: -10 }, (event) => {
+        //message(event.skill);
         if (!enabled) return;
-        let packetSkillInfo2 = skills.find(o => o.id2 == event.skill);
+
+        let packetSkillInfo2 = skills.find(o => (o.id + 10) == event.skill);
         if (packetSkillInfo2 && packetSkillInfo2.job == job) {
             locking = false;
             if (packetSkillInfo2.type == 'cleanse' && partyMembers != null) {
@@ -182,7 +239,6 @@ module.exports = function LetMeTarget(dispatch) {
         if (packetSkillInfo && packetSkillInfo.job == job && partyMembers != null) {
 
             if (packetSkillInfo.type == 'heal' && partyMembers.length > 0) {
-
                 sortHp();
                 let qtdTarget = 0;
                 locking = true;
@@ -203,24 +259,56 @@ module.exports = function LetMeTarget(dispatch) {
                 }
 
             } else if (packetSkillInfo.type == 'cleanse' && partyMembers != null) {
-
                 let qtdTarget = 0;
                 locking = true;
                 for (let i = 0; i < partyMembers.length; i++) {
                     let distance = checkDistance(ownX, ownY, ownZ, partyMembers[i].x, partyMembers[i].y, partyMembers[i].z);
 
-                    if (distance <= 35 && qtdTarget <= packetSkillInfo.targets && partyMembers[i].debuff == true) {
+                    if (distance <= 35 && qtdTarget <= packetSkillInfo.targets) {
                         let newEvent = {
                             target: partyMembers[i].cid,
                             unk: 0,
                             skill: event.skill
                         }
-                        doTimeOutLock(newEvent);
+                        if (smartC == true && partyMembers[i].debuff == true) {
+                            doTimeOutLock(newEvent);
+                        }
+                        if (smartC == false) {
+                            doTimeOutLock(newEvent);
+                        }
+
                         qtdTarget++;
                     }
 
                 }
 
+            } else if ((packetSkillInfo.type == 'dps' || packetSkillInfo.type == 'buff') && bossInfo != null) {
+                let distance = checkDistance(ownX, ownY, ownZ, bossInfo.x, bossInfo.y, bossInfo.z);
+                locking = true;
+
+                if (distance <= 35) {
+                    let newEvent = {
+                        target: bossInfo.id,
+                        unk: 0,
+                        skill: event.skill
+                    }
+                    doTimeOutLock(newEvent);
+                    if (autoDps) {
+                        doSkillActivation(event);
+                    }
+                }
+            } else if ((packetSkillInfo.type == 'debuff' || packetSkillInfo.type == 'debuff2') && bossInfo != null) {
+                let distance = checkDistance(ownX, ownY, ownZ, bossInfo.x, bossInfo.y, bossInfo.z);
+                locking = true;
+
+                if (distance <= 35) {
+                    let newEvent = {
+                        target: bossInfo.id,
+                        unk: 0,
+                        skill: event.skill
+                    }
+                    doTimeOutLock(newEvent);
+                }
             }
 
         }
@@ -233,15 +321,23 @@ module.exports = function LetMeTarget(dispatch) {
         }
     });
 
+    function doSkillActivation(event) {
+        event.skill = (event.skill + 10);
+        setTimeout(function () {
+            dispatch.toServer('C_START_SKILL', 3, event);
+            locking = false;
+        }, autoDpsDelay);
+    }
+
     function doTimeOutLock(event) {
         setTimeout(function () {
             if (locking == true) {
                 dispatch.toServer('C_CAN_LOCKON_TARGET', 1, event);
                 setTimeout(function () {
                     dispatch.toClient('S_CAN_LOCKON_TARGET', 1, Object.assign({ ok: true }, event));
-                }, 20);
+                }, 50);
             }
-        }, lockdelay ? dRandom() : 0);
+        }, lockDelay ? dRandom() : 20);
     }
 
     function sortHp() {
@@ -260,15 +356,7 @@ module.exports = function LetMeTarget(dispatch) {
 
     function message(msg, chat = false) {
         if (chat == true) {
-            dispatch.toClient('S_CHAT', 1, {
-                channel: 24,
-                authorID: 0,
-                unk1: 0,
-                gm: 0,
-                unk2: 0,
-                authorName: '',
-                message: '(Let Me Target) ' + msg
-            });
+            command.message('(Let Me Target) ' + msg);
         } else {
             console.log('(Let Me Target) ' + msg);
         }
