@@ -1,7 +1,7 @@
 {
     "delay_lockon": {
         "on": true,
-        "min": 200,
-        "max": 700
+        "min": 100,
+        "max": 200
     }
 }

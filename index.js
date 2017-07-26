@@ -13,7 +13,6 @@ module.exports = function LetMeTarget(dispatch) {
     const command = Command(dispatch);
 
     let enabled = true,
-        needHeal = [],
         ownId = null,
         cid = null,
         model = null,
@@ -22,7 +21,8 @@ module.exports = function LetMeTarget(dispatch) {
         ownX = null,
         ownY = null,
         ownZ = null,
-        ownAlive = false;
+        ownAlive = false,
+        abnormalityList = [];
 
     let lockdelay = config.delay_lockon.on || true,
         lockmin = config.delay_lockon.min || 200,
@@ -42,8 +42,12 @@ module.exports = function LetMeTarget(dispatch) {
         } else if (func == 'off') {
             enabled = false;
             command.msg('Let me Lock is DISABLED');
+        } else if (func == 'list') {
+            message(JSON.stringify(abnormalityList, null, 4));
+        } else if (func == 'list2') {
+            message(JSON.stringify(partyMembers, null, 4));
         }
-        
+
     });
 
     dispatch.hook('S_SPAWN_ME', 1, event => {
@@ -63,6 +67,7 @@ module.exports = function LetMeTarget(dispatch) {
                     online: party.online,
                     hpP: party.online ? 100 : 0,
                     debuff: false,
+                    debId: [],
                     x: null,
                     y: null,
                     z: null,
@@ -73,7 +78,6 @@ module.exports = function LetMeTarget(dispatch) {
         }
 
     });
-
     dispatch.hook('S_LEAVE_PARTY', 1, (event) => {
         partyMembers = [];
     });
@@ -123,10 +127,42 @@ module.exports = function LetMeTarget(dispatch) {
 
     })
 
-    dispatch.hook('C_PLAYER_LOCATION', 1, { order: -10 }, event => {
+    dispatch.hook('C_PLAYER_LOCATION', 1, { order: -10 }, (event) => {
         ownX = (event.x1 + event.x2) / 2;
         ownY = (event.y1 + event.y2) / 2;
         ownZ = (event.z1 + event.z2) / 2;
+    });
+
+    dispatch.hook('S_ABNORMALITY_BEGIN', 1, { order: -10 }, (event) => {
+        if (event.source.low == 0 || event.source.high == 0 || event.target.equals(event.source) || partyMembers == null) return
+
+        for (let i = 0; i < partyMembers.length; i++) {
+            if (partyMembers[i].cid.equals(event.target)) {
+                partyMembers[i].debuff = true;
+                partyMembers[i].debId.push(event.id);
+                break;
+            }
+        }
+
+    })
+
+    dispatch.hook('S_ABNORMALITY_END', 1, { order: -10 }, (event) => {
+        if (partyMembers == null) return
+
+        for (let i = 0; i < partyMembers.length; i++) {
+            if (partyMembers[i].cid.equals(event.target)) {
+                
+                let newDebId = [];
+                for (let x = 0; x < partyMembers[i].debId.length; x++) {
+                    if (partyMembers[i].debId[x] != event.id) newDebId.push(event.id);
+                }
+                partyMembers[i].debId = newDebId;
+                if (newDebId.length <= 0) partyMembers[i].debuff = false;
+
+                break;
+            }
+        }
+
     });
 
     dispatch.hook('C_START_SKILL', 3, { order: -10 }, (event) => {
@@ -134,7 +170,7 @@ module.exports = function LetMeTarget(dispatch) {
         if (!enabled) return;
 
         let packetSkillInfo = skills.find(o => o.id == event.skill);
-        if (packetSkillInfo && packetSkillInfo.job == job) {
+        if (packetSkillInfo && packetSkillInfo.job == job && partyMembers != null) {
 
             if (packetSkillInfo.type == 'heal' && partyMembers.length > 0) {
 
@@ -166,7 +202,7 @@ module.exports = function LetMeTarget(dispatch) {
                 for (let i = 0; i < partyMembers.length; i++) {
                     let distance = checkDistance(ownX, ownY, ownZ, partyMembers[i].x, partyMembers[i].y, partyMembers[i].z);
 
-                    if (distance <= 35 && qtdTarget <= packetSkillInfo.targets) {
+                    if (distance <= 35 && qtdTarget <= packetSkillInfo.targets && partyMembers[i].debuff == true) {
                         let newEvent = {
                             target: partyMembers[i].cid,
                             unk: 0,
