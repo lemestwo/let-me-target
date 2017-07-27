@@ -1,6 +1,6 @@
 # let-me-target
 
-Version: 0.2.3
+Version: 0.2.4
 
 Auto-lockon module for Tera Proxy.
 
@@ -25,7 +25,7 @@ Still need a lot of tests. If you find any bug just let me know.
  * Human Behavior for every lockon skill
     * Can Toggle on/off by command and config file (default: on)
     * Can change min and max time delay in config file (min: 50 / max: 100)
- * Check up to 35m if can target or not
+ * Can configure maximum distance for each skill in 'skills.js' file (recommended: 30~35)
  * Can add or remove skills in "skills.js" file
  * Config file: "config.json"
 

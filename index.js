@@ -1,5 +1,5 @@
 /**
- * Version: 0.2.3
+ * Version: 0.2.4
  * Made by Loggeru
  */
 var fs = require('fs');
@@ -266,7 +266,7 @@ module.exports = function LetMeTarget(dispatch) {
 
                     let distance = checkDistance(ownX, ownY, ownZ, partyMembers[i].x, partyMembers[i].y, partyMembers[i].z);
 
-                    if (partyMembers[i].curHp > 0 && partyMembers[i].hpP < 100 && distance <= 35 && qtdTarget <= packetSkillInfo.targets) {
+                    if (partyMembers[i].curHp > 0 && partyMembers[i].hpP < 100 && distance <= packetSkillInfo.dist && qtdTarget <= packetSkillInfo.targets) {
                         let newEvent = {
                             target: partyMembers[i].cid,
                             unk: 0,
@@ -284,7 +284,7 @@ module.exports = function LetMeTarget(dispatch) {
                 for (let i = 0; i < partyMembers.length; i++) {
                     let distance = checkDistance(ownX, ownY, ownZ, partyMembers[i].x, partyMembers[i].y, partyMembers[i].z);
 
-                    if (distance <= 35 && qtdTarget <= packetSkillInfo.targets) {
+                    if (distance <= packetSkillInfo.dist && qtdTarget <= packetSkillInfo.targets) {
                         let newEvent = {
                             target: partyMembers[i].cid,
                             unk: 0,
@@ -308,7 +308,7 @@ module.exports = function LetMeTarget(dispatch) {
 
                 sortDistBoss();
                 locking = true;
-                if (bossInfo.length > 0 && bossInfo[0].dist <= 35) {
+                if (bossInfo.length > 0 && bossInfo[0].dist <= packetSkillInfo.dist) {
                     let newEvent = {
                         target: bossInfo[0].id,
                         unk: 0,
