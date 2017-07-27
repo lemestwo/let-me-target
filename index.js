@@ -1,5 +1,5 @@
 /**
- * Version: 0.2.0
+ * Version: 0.2.2
  * Made by Loggeru
  */
 var fs = require('fs');
@@ -22,7 +22,7 @@ module.exports = function LetMeTarget(dispatch) {
         ownZ = null,
         ownAlive = false,
         locking = false,
-        bossInfo = null;
+        bossInfo = [];
 
     let lockDelay = config.delay_lockon.on || true,
         lockmin = config.delay_lockon.min || 50,
@@ -98,7 +98,7 @@ module.exports = function LetMeTarget(dispatch) {
     });
     dispatch.hook('S_LEAVE_PARTY', 1, (event) => {
         partyMembers = [];
-        bossInfo = null;
+        bossInfo = [];
         locking = false;
     });
 
@@ -190,32 +190,50 @@ module.exports = function LetMeTarget(dispatch) {
 
     dispatch.hook('S_BOSS_GAGE_INFO', 2, { order: -10 }, (event) => {
 
-        if (event.curHp < event.maxHp && bossInfo == null) {
-            bossInfo = {
-                id: event.id,
-                x: null,
-                y: null,
-                z: null,
-                w: null,
-                hp: Math.round(event.curHp / event.maxHp * 100)
-            };
+        let alreadyHaveBoss = false;
+        let tempPushEvent = {
+            id: event.id,
+            x: null,
+            y: null,
+            z: null,
+            w: null,
+            hp: Math.round(event.curHp / event.maxHp * 100),
+            dist: 100
         }
-
-        if (bossInfo != null && event.id.equals(bossInfo.id)) {
-            bossInfo.hp = Math.round(event.curHp / event.maxHp * 100);
-            if (event.curHp <= 0) bossInfo = null;
+        if (bossInfo.length <= 0) {
+            bossInfo.push(tempPushEvent);
+        } else {
+            for (let b = 0; b < bossInfo.length; b++) {
+                if (bossInfo[b].id.equals(event.id)) {
+                    bossInfo[b].hp = Math.round(event.curHp / event.maxHp * 100);
+                    alreadyHaveBoss = true;
+                    if (event.curHp <= 0) {
+                        bossInfo = bossInfo.filter(function (p) {
+                            return !p.id.equals(event.id);
+                        });
+                    }
+                    break;
+                }
+            }
+            if (alreadyHaveBoss == false) {
+                bossInfo.push(tempPushEvent);
+            }
         }
 
     });
 
     dispatch.hook('S_ACTION_STAGE', 1, { order: -10 }, (event) => {
 
-        if (bossInfo == null) return;
-        if (event.source.equals(bossInfo.id)) {
-            bossInfo.x = event.x;
-            bossInfo.y = event.y;
-            bossInfo.z = event.z;
-            bossInfo.w = event.w;
+        if (bossInfo.length <= 0) return;
+        for (let b = 0; b < bossInfo.length; b++) {
+            if (event.source.equals(bossInfo[b].id)) {
+                bossInfo[b].x = event.x;
+                bossInfo[b].y = event.y;
+                bossInfo[b].z = event.z;
+                bossInfo[b].w = event.w;
+                bossInfo[b].dist = checkDistance(ownX, ownY, ownZ, event.x, event.y, event.z);
+                break;
+            }
         }
 
     });
@@ -258,7 +276,7 @@ module.exports = function LetMeTarget(dispatch) {
 
                 }
 
-            } else if (packetSkillInfo.type == 'cleanse' && partyMembers != null) {
+            } else if (partyMembers[i].hpP > 0 && partyMembers[i].hpP < 100 && packetSkillInfo.type == 'cleanse' && partyMembers.length > 0) {
                 let qtdTarget = 0;
                 locking = true;
                 for (let i = 0; i < partyMembers.length; i++) {
@@ -281,14 +299,16 @@ module.exports = function LetMeTarget(dispatch) {
                     }
 
                 }
+            }
 
-            } else if ((packetSkillInfo.type == 'dps' || packetSkillInfo.type == 'buff') && bossInfo != null) {
-                let distance = checkDistance(ownX, ownY, ownZ, bossInfo.x, bossInfo.y, bossInfo.z);
+        } else if (packetSkillInfo && packetSkillInfo.job == job) {
+            if ((packetSkillInfo.type == 'dps' || packetSkillInfo.type == 'buff' || packetSkillInfo.type == 'debuff' || packetSkillInfo.type == 'debuff2') && bossInfo.length > 0) {
+
+                sortDistBoss();
                 locking = true;
-
-                if (distance <= 35) {
+                if (bossInfo.length > 0 && bossInfo[0].dist <= 35) {
                     let newEvent = {
-                        target: bossInfo.id,
+                        target: bossInfo[0].id,
                         unk: 0,
                         skill: event.skill
                     }
@@ -297,20 +317,8 @@ module.exports = function LetMeTarget(dispatch) {
                         doSkillActivation(event);
                     }
                 }
-            } else if ((packetSkillInfo.type == 'debuff' || packetSkillInfo.type == 'debuff2') && bossInfo != null) {
-                let distance = checkDistance(ownX, ownY, ownZ, bossInfo.x, bossInfo.y, bossInfo.z);
-                locking = true;
 
-                if (distance <= 35) {
-                    let newEvent = {
-                        target: bossInfo.id,
-                        unk: 0,
-                        skill: event.skill
-                    }
-                    doTimeOutLock(newEvent);
-                }
             }
-
         }
     });
 
@@ -343,6 +351,12 @@ module.exports = function LetMeTarget(dispatch) {
     function sortHp() {
         partyMembers.sort(function (a, b) {
             return parseFloat(a.hpP) - parseFloat(b.hpP);
+        });
+    }
+
+    function sortDistBoss() {
+        bossInfo.sort(function (a, b) {
+            return parseFloat(a.dist) - parseFloat(b.dist);
         });
     }
 

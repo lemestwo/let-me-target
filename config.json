@@ -2,7 +2,7 @@
     "delay_lockon": {
         "on": true,
         "min": 50,
-        "max": 200
+        "max": 100
     },
     "cleanse": {
         "smart": true
