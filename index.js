@@ -1,5 +1,5 @@
 /**
- * Version: 0.2.2
+ * Version: 0.2.3
  * Made by Loggeru
  */
 var fs = require('fs');
@@ -38,7 +38,7 @@ module.exports = function LetMeTarget(dispatch) {
         job = (model - 10101) % 100;
     });
 
-    command.add('lockon', () => {
+    command.add('letmelock', () => {
         enabled = !enabled;
         let txt = (enabled) ? 'ENABLED' : 'DISABLED';
         message('Let me Lock is ' + txt, true);
@@ -84,6 +84,7 @@ module.exports = function LetMeTarget(dispatch) {
                     cid: party.cid,
                     online: party.online,
                     hpP: party.online ? 100 : 0,
+                    curHp: 0,
                     debuff: false,
                     debId: [],
                     x: null,
@@ -115,6 +116,7 @@ module.exports = function LetMeTarget(dispatch) {
         for (let i = 0; i < partyMembers.length; i++) {
             if (partyMembers[i].playerId == event.playerId) {
                 partyMembers[i].hpP = Math.round(event.currentHp / event.maxHp * 100);
+                partyMembers[i].curHp = event.currentHp;
                 break;
             }
         }
@@ -264,7 +266,7 @@ module.exports = function LetMeTarget(dispatch) {
 
                     let distance = checkDistance(ownX, ownY, ownZ, partyMembers[i].x, partyMembers[i].y, partyMembers[i].z);
 
-                    if (partyMembers[i].hpP > 0 && partyMembers[i].hpP < 100 && distance <= 35 && qtdTarget <= packetSkillInfo.targets) {
+                    if (partyMembers[i].curHp > 0 && partyMembers[i].hpP < 100 && distance <= 35 && qtdTarget <= packetSkillInfo.targets) {
                         let newEvent = {
                             target: partyMembers[i].cid,
                             unk: 0,
@@ -276,7 +278,7 @@ module.exports = function LetMeTarget(dispatch) {
 
                 }
 
-            } else if (partyMembers[i].hpP > 0 && partyMembers[i].hpP < 100 && packetSkillInfo.type == 'cleanse' && partyMembers.length > 0) {
+            } else if (partyMembers[i].curHp > 0 && partyMembers[i].hpP < 100 && packetSkillInfo.type == 'cleanse' && partyMembers.length > 0) {
                 let qtdTarget = 0;
                 locking = true;
                 for (let i = 0; i < partyMembers.length; i++) {
@@ -374,7 +376,6 @@ module.exports = function LetMeTarget(dispatch) {
         } else {
             console.log('(Let Me Target) ' + msg);
         }
-
     }
 
     function dRandom() {
