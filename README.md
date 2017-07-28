@@ -1,6 +1,6 @@
 # let-me-target
 
-Version: 0.2.8
+Version: 0.2.9
 
 Auto-lockon module for Tera Proxy.
 

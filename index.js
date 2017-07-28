@@ -1,5 +1,5 @@
 /**
- * Version: 0.2.8
+ * Version: 0.2.9
  * Made by Loggeru
  */
 var fs = require('fs');
@@ -56,10 +56,15 @@ module.exports = function LetMeTarget(dispatch) {
         message('Smart Cleanse is ' + txt, true);
     });
 
-    command.add('l1', () => {
+    /*command.add('l1', () => {
         sortDistBoss();
         message(JSON.stringify(bossInfo, null, 4));
     });
+
+    command.add('l2', () => {
+        sortHp();
+        message(JSON.stringify(partyMembers, null, 4));
+    });*/
 
     command.add('autodps', (v1) => {
         if (v1 != null) {
@@ -162,7 +167,7 @@ module.exports = function LetMeTarget(dispatch) {
 
     dispatch.hook('S_ABNORMALITY_BEGIN', 1, { order: -10 }, (event) => {
         if (event.source.low == 0 || event.source.high == 0 || event.target.equals(event.source) || partyMembers == null || event.source.equals(cid)) return;
-        for (let y = x; y < partyMembers.length; y++) {
+        for (let y = 0; y < partyMembers.length; y++) {
             if (partyMembers[y].cid.equals(event.source)) return;
         }
 
@@ -270,7 +275,6 @@ module.exports = function LetMeTarget(dispatch) {
                 for (let i = 0; i < partyMembers.length; i++) {
 
                     let distance = checkDistance(ownX, ownY, ownZ, partyMembers[i].x, partyMembers[i].y, partyMembers[i].z);
-
                     if (partyMembers[i].curHp > 0 && partyMembers[i].hpP < 100 && distance <= packetSkillInfo.dist && qtdTarget <= packetSkillInfo.targets) {
                         let newEvent = {
                             target: partyMembers[i].cid,
