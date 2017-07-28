@@ -1,32 +1,32 @@
 module.exports = [
-    // mystic basic heal 
+    // Titanic Favor
     {
-        id: 67159764,
+        group: 5,
         job: 7,
         type: 'heal',
         dist: 35,
         targets: 4
     },
-    // priest basic heal
+    // Focus Heal
     {
-        id: 67299764,
+        group: 19,
         job: 6,
         type: 'heal',
         dist: 35,
         targets: 4
     },
-    // Healing immersion
+    // Healing Immersion
     {
-        id: 67479064,
+        group: 37,
         job: 6,
         type: 'heal',
         dist: 35,
         targets: 1
     },
 
-    // mystic cleanse
+    // Arun's Cleansing Touch
     {
-        id: 67198964,
+        group: 9,
         job: 7,
         type: 'cleanse',
         dist: 35,
@@ -35,57 +35,58 @@ module.exports = [
 
     // Volley of Curses
     {
-        id: 67349864,
+        group: 24,
         job: 7,
-        abnormality: [27160, 28090],
         dist: 30,
         type: 'debuff'
     },
-    
-    // Sleep Mystic
+    // Sonorous Dreams
     {
-        id: 67389064,
+        group: 28,
         job: 7,
-        abnormality: [],
         dist: 30,
-        type: 'debuff2'
+        type: 'debuff'
     },
-    // Plague
+    // Plague of Exhaustion
     {
-        id: 67409664,
+        group: 30,
         job: 6,
-        abnormality: [],
         dist: 30,
-        type: 'debuff2'
+        type: 'debuff'
+    },
+    // Ishara's Lullaby
+    {
+        group: 33,
+        job: 6,
+        dist: 30,
+        type: 'debuff'
     },
 
-    // E-Star
+    // Energy Stars
     {
-        id: 67459264,
+        group: 35,
         job: 6,
-        abnormality: [801500, 801501, 801502, 801503],
         dist: 25,
         type: 'buff'
     },
 
     // Contagion
     {
-        id: 67518964,
+        group: 41,
         job: 7,
-        abnormality: [],
         dist: 30,
         type: 'dps'
     },
     // Arrow Volley
     {
-        id: 67129964,
+        group: 2,
         job: 5,
         dist: 35,
         type: 'dps'
     },
     // Flaming Barrage
     {
-        id: 67309364,
+        group: 20,
         job: 4,
         dist: 35,
         type: 'dps'

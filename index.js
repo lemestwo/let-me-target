@@ -1,5 +1,5 @@
 /**
- * Version: 0.2.4
+ * Version: 0.2.8
  * Made by Loggeru
  */
 var fs = require('fs');
@@ -54,6 +54,11 @@ module.exports = function LetMeTarget(dispatch) {
         smartC = !smartC;
         let txt = (smartC) ? 'ENABLED' : 'DISABLED';
         message('Smart Cleanse is ' + txt, true);
+    });
+
+    command.add('l1', () => {
+        sortDistBoss();
+        message(JSON.stringify(bossInfo, null, 4));
     });
 
     command.add('autodps', (v1) => {
@@ -195,9 +200,9 @@ module.exports = function LetMeTarget(dispatch) {
         let alreadyHaveBoss = false;
         let tempPushEvent = {
             id: event.id,
-            x: null,
-            y: null,
-            z: null,
+            x: 99999999,
+            y: 99999999,
+            z: 99999999,
             w: null,
             hp: Math.round(event.curHp / event.maxHp * 100),
             dist: 100
@@ -244,10 +249,11 @@ module.exports = function LetMeTarget(dispatch) {
         //message(event.skill);
         if (!enabled) return;
 
-        let packetSkillInfo2 = skills.find(o => (o.id + 10) == event.skill);
-        if (packetSkillInfo2 && packetSkillInfo2.job == job) {
+        let skillInfo = getSkillInfo(event.skill);
+        let packetSkillInfo = skills.find(o => o.group == skillInfo.group && o.job == job);
+        if (packetSkillInfo && skillInfo.sub == 10) {
             locking = false;
-            if (packetSkillInfo2.type == 'cleanse' && partyMembers != null) {
+            if (packetSkillInfo.type == 'cleanse' && partyMembers != null) {
                 for (let i = 0; i < partyMembers.length; i++) {
                     partyMembers[i].debuff = false;
                     partyMembers[i].debId = [];
@@ -255,8 +261,7 @@ module.exports = function LetMeTarget(dispatch) {
             }
         }
 
-        let packetSkillInfo = skills.find(o => o.id == event.skill);
-        if (packetSkillInfo && packetSkillInfo.job == job && partyMembers != null) {
+        if (packetSkillInfo && partyMembers != null) {
 
             if (packetSkillInfo.type == 'heal' && partyMembers.length > 0) {
                 sortHp();
@@ -278,13 +283,13 @@ module.exports = function LetMeTarget(dispatch) {
 
                 }
 
-            } else if (partyMembers[i].curHp > 0 && partyMembers[i].hpP < 100 && packetSkillInfo.type == 'cleanse' && partyMembers.length > 0) {
+            } else if (packetSkillInfo.type == 'cleanse' && partyMembers.length > 0) {
                 let qtdTarget = 0;
                 locking = true;
                 for (let i = 0; i < partyMembers.length; i++) {
                     let distance = checkDistance(ownX, ownY, ownZ, partyMembers[i].x, partyMembers[i].y, partyMembers[i].z);
 
-                    if (distance <= packetSkillInfo.dist && qtdTarget <= packetSkillInfo.targets) {
+                    if (partyMembers[i].curHp > 0 && partyMembers[i].hpP < 100 && distance <= packetSkillInfo.dist && qtdTarget <= packetSkillInfo.targets) {
                         let newEvent = {
                             target: partyMembers[i].cid,
                             unk: 0,
@@ -296,15 +301,11 @@ module.exports = function LetMeTarget(dispatch) {
                         if (smartC == false) {
                             doTimeOutLock(newEvent);
                         }
-
                         qtdTarget++;
                     }
 
                 }
-            }
-
-        } else if (packetSkillInfo && packetSkillInfo.job == job) {
-            if ((packetSkillInfo.type == 'dps' || packetSkillInfo.type == 'buff' || packetSkillInfo.type == 'debuff' || packetSkillInfo.type == 'debuff2') && bossInfo.length > 0) {
+            } else if ((packetSkillInfo.type == 'dps' || packetSkillInfo.type == 'buff' || packetSkillInfo.type == 'debuff') && bossInfo != null) {
 
                 sortDistBoss();
                 locking = true;
@@ -321,15 +322,28 @@ module.exports = function LetMeTarget(dispatch) {
                 }
 
             }
+
         }
     });
 
     dispatch.hook('C_CANCEL_SKILL', 1, { order: -10 }, (event) => {
-        let packetSkillInfo = skills.find(o => o.id == event.skill);
-        if (packetSkillInfo && packetSkillInfo.job == job && partyMembers != null) {
+        let skillInfo = getSkillInfo(event.skill);
+        let packetSkillInfo = skills.find(o => o.group == skillInfo.group && o.job == job);
+        if (packetSkillInfo && partyMembers != null) {
             locking = false;
         }
     });
+
+    function getSkillInfo(id) {
+        // Thanks SP2
+        let nid = id -= 0x4000000;
+        return {
+            id: nid,
+            group: Math.floor(nid / 10000),
+            level: Math.floor(nid / 100) % 100,
+            sub: nid % 100
+        };
+    }
 
     function doSkillActivation(event) {
         event.skill = (event.skill + 10);

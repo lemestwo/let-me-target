@@ -1,6 +1,6 @@
 # let-me-target
 
-Version: 0.2.4
+Version: 0.2.8
 
 Auto-lockon module for Tera Proxy.
 
@@ -17,7 +17,7 @@ Still need a lot of tests. If you find any bug just let me know.
     * Can Toggle on/off by command and config file (default: on)
  * Auto-lock boss and finish the skill automatically
     * Arrow Volley and Flaming Barrage (DPS)
-    * Energy Star / Plague (Priest)
+    * Energy Stars / Plague / Ishara's Lullaby (Priest)
     * Volley of Curses / Sonorous Dreams / Contagion (Mystic)
     * Auto-finish can be Toggle on/off by command and config file (default: on)
     * Delay to finish can be changed by command and config file (default: 300)
@@ -40,12 +40,11 @@ Still need a lot of tests. If you find any bug just let me know.
 ```
 
  ## Last Update Fixes
- * Can heal and cleanse people with 1 HP
- * Can't cleanse dead people anymore
- * Can use the module in HH now
+ * Fixed Auto Skills if in group
+ * Changed how the module handle skills
+ * Added Ishara's Lullaby
 
  ## Planned
- * Better smart detection for Mystic cleanse
+ * Configurable delay for every skill
  * Save configs chaged by command
- * Improve buff/debuff lockons
  * Others
