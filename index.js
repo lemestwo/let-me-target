@@ -293,7 +293,7 @@ module.exports = function LetMeTarget(dispatch) {
                 for (let i = 0; i < partyMembers.length; i++) {
                     let distance = checkDistance(ownX, ownY, ownZ, partyMembers[i].x, partyMembers[i].y, partyMembers[i].z);
 
-                    if (partyMembers[i].curHp > 0 && partyMembers[i].hpP < 100 && distance <= packetSkillInfo.dist && qtdTarget <= packetSkillInfo.targets) {
+                    if (partyMembers[i].curHp > 0 && partyMembers[i].hpP <= 100 && distance <= packetSkillInfo.dist && qtdTarget <= packetSkillInfo.targets) {
                         let newEvent = {
                             target: partyMembers[i].cid,
                             unk: 0,
