@@ -82,7 +82,7 @@ module.exports = function LetMeTarget(dispatch) {
         ownAlive = event.alive
     });
 
-    dispatch.hook('S_PARTY_MEMBER_LIST', 5, (event) => {
+    dispatch.hook('S_PARTY_MEMBER_LIST', 6, (event) => {
 
         partyMembers = [];
 
@@ -91,7 +91,7 @@ module.exports = function LetMeTarget(dispatch) {
 
                 partyMembers.push({
                     playerId: party.playerId,
-                    cid: party.cid,
+                    cid: party.gameId,
                     online: party.online,
                     hpP: party.online ? 100 : 0,
                     curHp: 0,
@@ -121,7 +121,7 @@ module.exports = function LetMeTarget(dispatch) {
 
     });
 
-    dispatch.hook('S_PARTY_MEMBER_CHANGE_HP', 2, (event) => {
+    dispatch.hook('S_PARTY_MEMBER_CHANGE_HP', 3, (event) => {
 
         for (let i = 0; i < partyMembers.length; i++) {
             if (partyMembers[i].playerId == event.playerId) {
@@ -165,7 +165,7 @@ module.exports = function LetMeTarget(dispatch) {
         ownZ = (event.z1 + event.z2) / 2;
     });
 
-    dispatch.hook('S_ABNORMALITY_BEGIN', 1, { order: -10 }, (event) => {
+    dispatch.hook('S_ABNORMALITY_BEGIN', 2, { order: -10 }, (event) => {
         if (event.source.low == 0 || event.source.high == 0 || event.target.equals(event.source) || partyMembers == null || event.source.equals(cid)) return;
         for (let y = 0; y < partyMembers.length; y++) {
             if (partyMembers[y].cid.equals(event.source)) return;
@@ -200,7 +200,7 @@ module.exports = function LetMeTarget(dispatch) {
 
     });
 
-    dispatch.hook('S_BOSS_GAGE_INFO', 2, { order: -10 }, (event) => {
+    dispatch.hook('S_BOSS_GAGE_INFO', 3, { order: -10 }, (event) => {
 
         let alreadyHaveBoss = false;
         let tempPushEvent = {
@@ -234,11 +234,11 @@ module.exports = function LetMeTarget(dispatch) {
 
     });
 
-    dispatch.hook('S_ACTION_STAGE', 1, { order: -10 }, (event) => {
+    dispatch.hook('S_ACTION_STAGE', 3, { order: -10 }, (event) => {
 
         if (bossInfo.length <= 0) return;
         for (let b = 0; b < bossInfo.length; b++) {
-            if (event.source.equals(bossInfo[b].id)) {
+            if (event.gameId.equals(bossInfo[b].id)) {
                 bossInfo[b].x = event.x;
                 bossInfo[b].y = event.y;
                 bossInfo[b].z = event.z;
