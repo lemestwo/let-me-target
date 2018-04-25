@@ -1,5 +1,5 @@
 /**
- * Version: 0.2.9
+ * Version: 0.2.10
  * Made by Loggeru
  */
 var fs = require('fs');
@@ -31,10 +31,10 @@ module.exports = function LetMeTarget(dispatch) {
         autoDps = config.dps.auto || false,
         autoDpsDelay = config.dps.delay || 350;
 
-    dispatch.hook('S_LOGIN', 2, (event) => {
+    dispatch.hook('S_LOGIN', 10, (event) => {
         ownId = event.playerId;
-        cid = event.cid;
-        model = event.model;
+        cid = event.gameId;
+        model = event.templateId;
         job = (model - 10101) % 100;
     });
 
@@ -78,7 +78,7 @@ module.exports = function LetMeTarget(dispatch) {
         }
     });
 
-    dispatch.hook('S_SPAWN_ME', 1, event => {
+    dispatch.hook('S_SPAWN_ME', 2, event => {
         ownAlive = event.alive
     });
 
@@ -144,14 +144,14 @@ module.exports = function LetMeTarget(dispatch) {
 
     });
 
-    dispatch.hook('S_USER_LOCATION', 1, { order: -10 }, (event) => {
+    dispatch.hook('S_USER_LOCATION', 4, { order: -10 }, (event) => {
 
         if (partyMembers != null) {
             for (let i = 0; i < partyMembers.length; i++) {
-                if (partyMembers[i].cid.equals(event.target)) {
-                    partyMembers[i].x = (event.x1 + event.x2) / 2;
-                    partyMembers[i].y = (event.y1 + event.y2) / 2;
-                    partyMembers[i].z = (event.z1 + event.z2) / 2;
+                if (partyMembers[i].cid.equals(event.gameId)) {
+                    partyMembers[i].x = (event.loc.x + event.dest.x) / 2;
+                    partyMembers[i].y = (event.loc.y + event.dest.y) / 2;
+                    partyMembers[i].z = (event.loc.z + event.dest.z) / 2;
                     break;
                 }
             }
@@ -159,10 +159,10 @@ module.exports = function LetMeTarget(dispatch) {
 
     })
 
-    dispatch.hook('C_PLAYER_LOCATION', 1, { order: -10 }, (event) => {
-        ownX = (event.x1 + event.x2) / 2;
-        ownY = (event.y1 + event.y2) / 2;
-        ownZ = (event.z1 + event.z2) / 2;
+    dispatch.hook('C_PLAYER_LOCATION', 5, { order: -10 }, (event) => {
+        ownX = (event.loc.x + event.dest.x) / 2;
+        ownY = (event.loc.y + event.dest.y) / 2;
+        ownZ = (event.loc.z + event.dest.z) / 2;
     });
 
     dispatch.hook('S_ABNORMALITY_BEGIN', 2, { order: -10 }, (event) => {
@@ -234,23 +234,23 @@ module.exports = function LetMeTarget(dispatch) {
 
     });
 
-    dispatch.hook('S_ACTION_STAGE', 3, { order: -10 }, (event) => {
+    dispatch.hook('S_ACTION_STAGE', 4, { order: -10 }, (event) => {
 
         if (bossInfo.length <= 0) return;
         for (let b = 0; b < bossInfo.length; b++) {
             if (event.gameId.equals(bossInfo[b].id)) {
-                bossInfo[b].x = event.x;
-                bossInfo[b].y = event.y;
-                bossInfo[b].z = event.z;
+                bossInfo[b].x = event.loc.x;
+                bossInfo[b].y = event.loc.y;
+                bossInfo[b].z = event.loc.z;
                 bossInfo[b].w = event.w;
-                bossInfo[b].dist = checkDistance(ownX, ownY, ownZ, event.x, event.y, event.z);
+                bossInfo[b].dist = checkDistance(ownX, ownY, ownZ, event.loc.x, event.loc.y, event.loc.z);
                 break;
             }
         }
 
     });
 
-    dispatch.hook('C_START_SKILL', 3, { order: -10 }, (event) => {
+    dispatch.hook('C_START_SKILL', 5, { order: -10 }, (event) => {
         //message(event.skill);
         if (!enabled) return;
 
@@ -352,7 +352,7 @@ module.exports = function LetMeTarget(dispatch) {
     function doSkillActivation(event) {
         event.skill = (event.skill + 10);
         setTimeout(function () {
-            dispatch.toServer('C_START_SKILL', 3, event);
+            dispatch.toServer('C_START_SKILL', 5, event);
             locking = false;
         }, autoDpsDelay);
     }
